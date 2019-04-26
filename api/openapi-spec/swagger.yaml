@@ -1,0 +1,500 @@
+openapi: 3.0.2
+info:
+  title: Form3 Payments
+  description: |
+    Form3 Payments server.
+
+    Supports `SEPA`, `SWIFT` and other types of payments. Find out more at Form3 [website](https://form3.tech/services) and API [overview page](http://api-docs.form3.tech/).
+  version: 0.0.1
+  termsOfService: https://form3.tech/terms
+  contact:
+    name: Form3 API team
+    url: https://form3.tech/contact
+    email: api@form3.tech
+
+servers:
+- url: http://localhost
+  description: Development
+- url: https://api.test.form3.tech/v1
+  description: Staging
+- url: https://api.form3.tech/v1
+  description: Production
+
+tags:
+- name: payments
+  description: Everything about payments
+- name: status
+  description: Technical stuff
+  externalDocs:
+    description: Status page
+    url: https://status.form3.tech/
+
+paths:
+  /payments:
+    post:
+      tags:
+      - payments
+      summary: Create a new payment
+      description: Creates a new payment object
+      operationId: createPayment
+      requestBody:
+        description: Payment object to create
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Payment'
+      responses:
+        '201':
+          description: Payment has been created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                      $ref: '#/components/schemas/Payment'
+                  links:
+                    type: object
+                    properties:
+                      self:
+                        type: string
+                        format: uri
+                        example: https://api.test.form3.tech/v1/payments
+          links:
+            getPaymentById:
+              operationId: readPayment
+              parameters:
+                id: '$response.body#/data/id'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        default:
+          $ref: '#/components/responses/InternalServerError'
+
+    get:
+      tags:
+      - payments
+      summary: Get all payments
+      description: Return all payments available
+      operationId: readPayments
+      responses:
+        '200':
+          description: Operation successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Payment'
+                  links:
+                    type: object
+                    properties:
+                      self:
+                        type: string
+                        format: uri
+                        example: https://api.test.form3.tech/v1/payments
+
+  /payments/{id}:
+    get:
+      tags:
+      - payments
+      summary: Get a specific payment
+      description: Return a specific payment by its ID
+      operationId: readPayment
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+        description: UUID of a payment to get
+      responses:
+        '200':
+          description: Payment was retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                      $ref: '#/components/schemas/Payment'
+                  links:
+                    type: object
+                    properties:
+                      self:
+                        type: string
+                        format: uri
+                        example: https://api.test.form3.tech/v1/payments
+        '404':
+          $ref: '#/components/responses/BadRequest'
+        default:
+          $ref: '#/components/responses/InternalServerError'
+
+    put:
+      tags:
+      - payments
+      summary: Upgrade payment
+      description: Replace payment object completely with a new payload
+      operationId: upgradePayment
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+        description: UUID of a payment to rewrite
+      requestBody:
+        description: Payment object to replace with
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Payment'
+      responses:
+        '200':
+          description: Payment has been replaced
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                      $ref: '#/components/schemas/Payment'
+                  links:
+                    type: object
+                    properties:
+                      self:
+                        type: string
+                        format: uri
+                        example: https://api.test.form3.tech/v1/payments
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        default:
+          $ref: '#/components/responses/InternalServerError'
+
+    patch:
+      tags:
+      - payments
+      summary: Update payment
+      description: Change only specific properties of a payment from the payload
+      operationId: updatePayment
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+        description: UUID of a payment to amend
+      requestBody:
+        description: Payment object with properties that need to be altered with new values
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Payment'
+      responses:
+        '200':
+          description: Payment has been updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                      $ref: '#/components/schemas/Payment'
+                  links:
+                    type: object
+                    properties:
+                      self:
+                        type: string
+                        format: uri
+                        example: https://api.test.form3.tech/v1/payments
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        default:
+          $ref: '#/components/responses/InternalServerError'
+
+    delete:
+      tags:
+      - payments
+      summary: Delete specific payment
+      description: Remove payment from a system by its ID
+      operationId: deletePayment
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+        description: UUID of a payment to delete
+      responses:
+        '204':
+          description: Payment is no longer in a system
+        default:
+          $ref: '#/components/responses/InternalServerError'
+
+components:
+  schemas:
+    Payment:
+      type: object
+      required:
+      - type
+      - organisation_id
+      - attributes
+      properties:
+        type:
+          type: string
+          enum:
+          - Payment
+          example: Payment
+        organisation_id:
+          type: string
+          format: uuid
+        attributes:
+          $ref: '#/components/schemas/PaymentAttributes'
+    PaymentAttributes:
+      type: object
+      properties:
+        amount:
+          type: number
+          format: float
+          example: 100.21
+        beneficiary_party:
+          $ref: '#/components/schemas/BeneficiaryParty'
+        charges_information:
+          $ref: '#/components/schemas/ChargesInformation'
+        currency:
+          $ref: '#/components/schemas/Currencies'
+        debtor_party:
+          $ref: '#/components/schemas/DebtorParty'
+        end_to_end_reference:
+          type: string
+          example: Wil piano Jan
+        fx:
+          $ref: '#/components/schemas/Forex'
+        numeric_reference:
+          type: string
+          example: 1002001
+        payment_id:
+          type: string
+          example: 123456789012345678
+        payment_purpose:
+          type: string
+          example: Paying for goods/services
+        payment_scheme:
+          type: string
+          enum:
+          - FPS
+          - SEPAINSTANT
+          - Bacs
+          example: FPS
+        payment_type:
+          type: string
+          example: Credit
+        processing_date:
+          type: string
+          format: date
+          example: 2017-01-18
+        reference:
+          type: string
+          example: Payment for Em's piano lessons
+        scheme_payment_sub_type:
+          type: string
+          enum:
+          - InternetBanking
+          example: InternetBanking
+        scheme_payment_type:
+          type: string
+          enum:
+          - ImmediatePayment
+          - Credit
+          example: ImmediatePayment
+        sponsor_party:
+          $ref: '#/components/schemas/SponsorParty'
+    BeneficiaryParty:
+      type: object
+      properties:
+        account_name:
+          type: string
+          minLength: 1
+          example: W Owens
+        account_number:
+          type: string
+          pattern: '^\d{8}|^[A-Z]{2}\d{18,20}$'
+          example: '31926819'
+        account_number_code:
+          type: string
+          enum:
+          - BBAN
+          - IBAN
+          example: BBAN
+        account_type:
+          type: integer
+          minimum: 0
+          example: 0
+        address:
+          type: string
+          example: 1 The Beneficiary Localtown SE2
+        bank_id:
+          type: string
+          pattern: '^\d{6}$'
+          example: 403000
+        bank_id_code:
+          type: string
+          example: GBDSC
+        name:
+          type: string
+          minLength: 1
+          example: Wilfred Jeremiah Owens
+    DebtorParty:
+      type: object
+      properties:
+        account_name:
+          type: string
+          minLength: 1
+          example: EJ Brown Black
+        account_number:
+          type: string
+          pattern: '^\d{8}|^[A-Z]{2}\d{2}[A-Z0-9]{4}\d{12,14}$'
+          example: 'GB29XABC10161234567801'
+        account_number_code:
+          type: string
+          enum:
+          - BBAN
+          - IBAN
+          example: IBAN
+        address:
+          type: string
+          example: 10 Debtor Crescent Sourcetown NE1
+        bank_id:
+          type: string
+          pattern: '^\d{6}$'
+          example: 203301
+        bank_id_code:
+          type: string
+          example: GBDSC
+        name:
+          type: string
+          minLength: 1
+          example: Emelia Jane Brown
+    SponsorParty:
+      type: object
+      properties:
+        account_number:
+          type: string
+          pattern: '^\d{8}$'
+          example: 56781234
+        bank_id:
+          type: string
+          pattern: '^\d{6}$'
+          example: 123123
+        bank_id_code:
+          type: string
+          example: GBDSC
+    ChargesInformation:
+      type: object
+      properties:
+        bearer_code:
+          type: string
+          example: SHAR
+        sender_charges:
+          $ref: '#/components/schemas/Charges'
+        receiver_charges_amount:
+          type: number
+          format: float
+          example: 1.00
+        receiver_charges_currency:
+          $ref: '#/components/schemas/Currencies'
+    Charges:
+      type: array
+      items:
+        $ref: '#/components/schemas/Charge'
+    Charge:
+      type: object
+      properties:
+        amount:
+          type: number
+          format: float
+          example: 5.00
+        currency:
+          $ref: '#/components/schemas/Currencies'
+    Currencies:
+      type: string
+      enum:
+      - GBP
+      - USD
+      - CAD
+      - CHF
+      - JPY
+      - EUR
+      - PLN
+      - SEK
+      - NOK
+      - DKK
+      - HUF
+      - BTC
+      - BCH
+      - ETH
+      example: USD
+    Forex:
+      type: object
+      properties:
+        contract_reference:
+          type: string
+          minLength: 1
+          example: FX123
+        exchange_rate:
+          type: number
+          format: double
+          example: 2.00000
+        original_amount:
+          type: number
+          format: float
+          example: 200.42
+        original_currency:
+          $ref: '#/components/schemas/Currencies'
+
+    Error:
+      type: object
+      properties:
+        message:
+          type: string
+          enum:
+          - Not Found
+          - Bad Request
+          - Internal Server Error
+
+  responses:
+    NotFound:
+      description: Requested payment was not found in a system
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    BadRequest:
+      description: Invalid object
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    InternalServerError:
+      description: Something went wrong internally
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+externalDocs:
+  description: "Find out more about Form3 API"
+  url: "http://api-docs.form3.tech/"
