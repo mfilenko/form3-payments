@@ -1,4 +1,6 @@
-.PHONY: dep test
+.PHONY: dep test compose decompose start stop
+
+compose_file = deployments/docker-compose.yml
 
 default:
 	go build
@@ -13,3 +15,15 @@ dep:
 
 test:
 	go test -v
+
+compose:
+	docker-compose -f $(compose_file) up --build --detach
+
+decompose:
+	docker-compose -f $(compose_file) down --volumes
+
+start:
+	docker-compose -f $(compose_file) start
+
+stop:
+	docker-compose -f $(compose_file) stop
