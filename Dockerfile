@@ -5,6 +5,8 @@ RUN go get -d -v github.com/julienschmidt/httprouter
 RUN go get -d -v github.com/lib/pq
 RUN go get -d -v github.com/jmoiron/sqlx
 RUN go get -d -v github.com/kelseyhightower/envconfig
+RUN go get -d -v github.com/stretchr/testify/assert
+RUN go get -d -v github.com/bitly/go-simplejson
 COPY . .
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o payments .
 
