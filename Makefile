@@ -11,6 +11,7 @@ dep:
 	go get -u github.com/lib/pq
 	go get -u github.com/jmoiron/sqlx
 	go get -u github.com/kelseyhightower/envconfig
+	go get -u github.com/imdario/mergo
 	go get -u github.com/stretchr/testify/assert
 	go get -u github.com/bitly/go-simplejson
 
