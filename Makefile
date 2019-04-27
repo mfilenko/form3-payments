@@ -1,4 +1,4 @@
-.PHONY: dep test compose decompose start stop
+.PHONY: dep test compose decompose start stop sandwich
 
 compose_file = deployments/docker-compose.yml
 
@@ -27,3 +27,6 @@ start:
 
 stop:
 	docker-compose -f $(compose_file) stop
+
+sandwich:
+	@[ $$(whoami) = "root" ] && (echo "ok"; echo "ham" > ~/sandwich) || (echo "make it yourself" && exit 13)
