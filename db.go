@@ -66,6 +66,7 @@ func GetPayments(db *sqlx.DB) ([]Payment, error) {
 	if err := db.Select(&payments, query); err != nil {
 		return nil, err
 	}
+
 	return payments, nil
 }
 

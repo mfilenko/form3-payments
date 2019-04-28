@@ -29,6 +29,7 @@ type Error struct {
 func serve(w http.ResponseWriter, code int, data interface{}) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(code)
+
 	if code == 204 || code >= 400 {
 		json.NewEncoder(w).Encode(&Error{Message: http.StatusText(code)})
 	} else {
@@ -40,6 +41,7 @@ func serve(w http.ResponseWriter, code int, data interface{}) {
 func (server *Server) ReadPayments(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	var status int
 	var response *Response
+
 	if payments, err := GetPayments(server.DB); err != nil {
 		log.Print(err)
 		status = http.StatusInternalServerError
@@ -50,6 +52,7 @@ func (server *Server) ReadPayments(w http.ResponseWriter, r *http.Request, _ htt
 			Links: Links{Self: "https://api.test.form3.tech/v1/payments"},
 		}
 	}
+
 	serve(w, status, response)
 }
 
@@ -57,7 +60,9 @@ func (server *Server) ReadPayments(w http.ResponseWriter, r *http.Request, _ htt
 func (server *Server) ReadPayment(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	var status int
 	var response *Response
+
 	payment := Payment{ID: strfmt.UUID4(ps.ByName("id"))}
+
 	if err := payment.Get(server.DB); err != nil {
 		log.Print(err)
 		switch err {
@@ -73,6 +78,7 @@ func (server *Server) ReadPayment(w http.ResponseWriter, r *http.Request, ps htt
 			Links: Links{Self: "https://api.test.form3.tech/v1/payments"},
 		}
 	}
+
 	serve(w, status, response)
 }
 
@@ -81,6 +87,7 @@ func (server *Server) CreatePayment(w http.ResponseWriter, r *http.Request, _ ht
 	var status int
 	var response *Response
 	var payment Payment
+
 	if err := json.NewDecoder(r.Body).Decode(&payment); err != nil {
 		log.Print(err)
 		status = http.StatusBadRequest
@@ -94,6 +101,7 @@ func (server *Server) CreatePayment(w http.ResponseWriter, r *http.Request, _ ht
 			Links: Links{Self: "https://api.test.form3.tech/v1/payments"},
 		}
 	}
+
 	serve(w, status, response)
 }
 
@@ -102,7 +110,9 @@ func (server *Server) UpgradePayment(w http.ResponseWriter, r *http.Request, ps 
 	var status int
 	var response *Response
 	var payload Payment
+
 	payment := Payment{ID: strfmt.UUID4(ps.ByName("id"))}
+
 	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
 		log.Print(err)
 		status = http.StatusBadRequest
@@ -128,6 +138,7 @@ func (server *Server) UpgradePayment(w http.ResponseWriter, r *http.Request, ps 
 			}
 		}
 	}
+
 	serve(w, status, response)
 }
 
@@ -136,7 +147,9 @@ func (server *Server) UpdatePayment(w http.ResponseWriter, r *http.Request, ps h
 	var status int
 	var response *Response
 	var payload Payment
+
 	payment := Payment{ID: strfmt.UUID4(ps.ByName("id"))}
+
 	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
 		log.Print(err)
 		status = http.StatusBadRequest
@@ -162,18 +175,22 @@ func (server *Server) UpdatePayment(w http.ResponseWriter, r *http.Request, ps h
 			}
 		}
 	}
+
 	serve(w, status, response)
 }
 
 // DELETE /payments/:id - delete payment by ID.
 func (server *Server) DeletePayment(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	var status int
+
 	payment := Payment{ID: strfmt.UUID4(ps.ByName("id"))}
+
 	if err := payment.Remove(server.DB); err != nil {
 		log.Print(err)
 		status = http.StatusInternalServerError
 	} else {
 		status = http.StatusNoContent
 	}
+
 	serve(w, status, nil)
 }
