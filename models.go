@@ -13,10 +13,10 @@ import (
 // Additionally, there's a need to extend models with tags for `sql` package.
 
 type Payment struct {
-	ID             strfmt.UUID       `json:"id" db:"id"`
+	ID             strfmt.UUID4      `json:"id" db:"id"`
 	Type           string            `json:"type,omitempty" db:"type"`
 	Version        uint64            `json:"version" db:"version"`
-	OrganisationID strfmt.UUID       `json:"organisation_id" db:"organisation_id"`
+	OrganisationID strfmt.UUID4      `json:"organisation_id" db:"organisation_id"`
 	Attributes     PaymentAttributes `json:"attributes" db:"attributes"`
 }
 

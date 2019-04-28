@@ -1,23 +1,10 @@
 package main
 
-import "github.com/julienschmidt/httprouter"
-
-type Route struct {
-	Method string
-	Path   string
-	Handle httprouter.Handle
-}
-
-type Routes []Route
-
-func Endpoints() Routes {
-	routes := Routes{
-		Route{"GET", "/payments", ReadPayments},
-		Route{"GET", "/payments/:id", ReadPayment},
-		Route{"POST", "/payments", CreatePayment},
-		Route{"PUT", "/payments/:id", UpgradePayment},
-		Route{"PATCH", "/payments/:id", UpdatePayment},
-		Route{"DELETE", "/payments/:id", DeletePayment},
-	}
-	return routes
+func (server *Server) Setup() {
+	server.Router.Handle("GET", "/payments", server.ReadPayments)
+	server.Router.Handle("GET", "/payments/:id", server.ReadPayment)
+	server.Router.Handle("POST", "/payments", server.CreatePayment)
+	server.Router.Handle("PUT", "/payments/:id", server.UpgradePayment)
+	server.Router.Handle("PATCH", "/payments/:id", server.UpdatePayment)
+	server.Router.Handle("DELETE", "/payments/:id", server.DeletePayment)
 }
