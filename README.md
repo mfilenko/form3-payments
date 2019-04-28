@@ -25,7 +25,7 @@ Teardown:
 Further improvements
 --------------------
 
-I tried to keep it really simple and minimalistic because it supposed to be a µ-service. In case the project is intended to grow into something monolithic I would, for example, put all the components into a single `server` structure, group handlers into separate packages, etc.
+I tried to keep it really simple and minimalistic because it supposed to be a µ-service. In case the project is intended to grow into something monolithic I would, for example, group handlers into separate packages, etc.
 
 ##### What I would do next:
 

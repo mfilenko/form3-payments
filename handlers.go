@@ -8,6 +8,7 @@ import (
 
 	"github.com/julienschmidt/httprouter"
 
+	"github.com/go-openapi/strfmt"
 	"github.com/imdario/mergo"
 )
 
@@ -36,17 +37,16 @@ func serve(w http.ResponseWriter, code int, data interface{}) {
 }
 
 // GET /payments - read all payments.
-func ReadPayments(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+func (server *Server) ReadPayments(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	var status int
 	var response *Response
-	payments := []Payment{}
-	if err := QueryPayments(&payments); err != nil {
+	if payments, err := GetPayments(server.DB); err != nil {
 		log.Print(err)
 		status = http.StatusInternalServerError
 	} else {
 		status = http.StatusOK
 		response = &Response{
-			Data:  &payments,
+			Data:  payments,
 			Links: Links{Self: "https://api.test.form3.tech/v1/payments"},
 		}
 	}
@@ -54,11 +54,11 @@ func ReadPayments(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 }
 
 // GET /payments/:id - read a specific payment.
-func ReadPayment(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+func (server *Server) ReadPayment(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	var status int
 	var response *Response
-	var payment Payment
-	if err := QueryPayment(&payment, ps.ByName("id")); err != nil {
+	payment := Payment{ID: strfmt.UUID4(ps.ByName("id"))}
+	if err := payment.Get(server.DB); err != nil {
 		log.Print(err)
 		switch err {
 		case sql.ErrNoRows:
@@ -69,7 +69,7 @@ func ReadPayment(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	} else {
 		status = http.StatusOK
 		response = &Response{
-			Data:  &payment,
+			Data:  payment,
 			Links: Links{Self: "https://api.test.form3.tech/v1/payments"},
 		}
 	}
@@ -77,20 +77,20 @@ func ReadPayment(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 }
 
 // POST /payments - create new payment.
-func CreatePayment(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+func (server *Server) CreatePayment(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	var status int
 	var response *Response
 	var payment Payment
 	if err := json.NewDecoder(r.Body).Decode(&payment); err != nil {
 		log.Print(err)
 		status = http.StatusBadRequest
-	} else if err := StorePayment(&payment); err != nil {
+	} else if err := payment.Save(server.DB); err != nil {
 		log.Print(err)
 		status = http.StatusInternalServerError
 	} else {
 		status = http.StatusCreated
 		response = &Response{
-			Data:  &payment,
+			Data:  payment,
 			Links: Links{Self: "https://api.test.form3.tech/v1/payments"},
 		}
 	}
@@ -98,14 +98,15 @@ func CreatePayment(w http.ResponseWriter, r *http.Request, _ httprouter.Params) 
 }
 
 // PUT /payments/:id - replace payment completely.
-func UpgradePayment(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+func (server *Server) UpgradePayment(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	var status int
 	var response *Response
-	var payload, payment Payment
+	var payload Payment
+	payment := Payment{ID: strfmt.UUID4(ps.ByName("id"))}
 	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
 		log.Print(err)
 		status = http.StatusBadRequest
-	} else if err := QueryPayment(&payment, ps.ByName("id")); err != nil {
+	} else if err := payment.Get(server.DB); err != nil {
 		log.Print(err)
 		switch err {
 		case sql.ErrNoRows:
@@ -116,13 +117,13 @@ func UpgradePayment(w http.ResponseWriter, r *http.Request, ps httprouter.Params
 	} else {
 		payload.ID = payment.ID
 		payload.Version = payment.Version + 1
-		if err := ReplacePayment(&payload); err != nil {
+		if err := payload.Overwrite(server.DB); err != nil {
 			log.Print(err)
 			status = http.StatusInternalServerError
 		} else {
 			status = http.StatusOK
 			response = &Response{
-				Data:  &payload,
+				Data:  payload,
 				Links: Links{Self: "https://api.test.form3.tech/v1/payments"},
 			}
 		}
@@ -131,14 +132,15 @@ func UpgradePayment(w http.ResponseWriter, r *http.Request, ps httprouter.Params
 }
 
 // PATCH /payments/:id - update payment partially.
-func UpdatePayment(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+func (server *Server) UpdatePayment(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	var status int
 	var response *Response
-	var payload, payment Payment
+	var payload Payment
+	payment := Payment{ID: strfmt.UUID4(ps.ByName("id"))}
 	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
 		log.Print(err)
 		status = http.StatusBadRequest
-	} else if err := QueryPayment(&payment, ps.ByName("id")); err != nil {
+	} else if err := payment.Get(server.DB); err != nil {
 		log.Print(err)
 		switch err {
 		case sql.ErrNoRows:
@@ -149,13 +151,13 @@ func UpdatePayment(w http.ResponseWriter, r *http.Request, ps httprouter.Params)
 	} else {
 		mergo.Merge(&payload, payment)
 		payload.Version++
-		if err := ReplacePayment(&payload); err != nil {
+		if err := payload.Overwrite(server.DB); err != nil {
 			log.Print(err)
 			status = http.StatusInternalServerError
 		} else {
 			status = http.StatusOK
 			response = &Response{
-				Data:  &payload,
+				Data:  payload,
 				Links: Links{Self: "https://api.test.form3.tech/v1/payments"},
 			}
 		}
@@ -164,9 +166,10 @@ func UpdatePayment(w http.ResponseWriter, r *http.Request, ps httprouter.Params)
 }
 
 // DELETE /payments/:id - delete payment by ID.
-func DeletePayment(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+func (server *Server) DeletePayment(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	var status int
-	if err := ErasePayment(ps.ByName("id")); err != nil {
+	payment := Payment{ID: strfmt.UUID4(ps.ByName("id"))}
+	if err := payment.Remove(server.DB); err != nil {
 		log.Print(err)
 		status = http.StatusInternalServerError
 	} else {

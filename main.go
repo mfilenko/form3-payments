@@ -2,18 +2,15 @@ package main
 
 import (
 	"log"
-	"net/http"
 )
 
 func main() {
-	config := Configure()
+	s := NewServer()
 
-	OpenDB(&config)
-	defer CloseDB()
+	s.Start()
+	defer s.Stop()
 
-	if config.Debug {
+	if s.Config.Debug {
 		log.SetFlags(log.LstdFlags | log.Lshortfile)
 	}
-
-	log.Fatal(http.ListenAndServe(config.Addr, Router(Endpoints())))
 }

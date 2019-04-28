@@ -6,7 +6,7 @@ import (
 	"github.com/kelseyhightower/envconfig"
 )
 
-type Conf struct {
+type Configuration struct {
 	Debug      bool   `default:"false"`
 	Addr       string `default:":8080"`
 	DBHost     string `default:"postgres"`
@@ -17,8 +17,8 @@ type Conf struct {
 	DBSslMode  string `default:"disable"`
 }
 
-func Configure() Conf {
-	var config Conf
+func Configure() Configuration {
+	var config Configuration
 
 	err := envconfig.Process("", &config)
 	if err != nil {

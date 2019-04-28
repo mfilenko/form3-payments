@@ -14,22 +14,22 @@ import (
 
 var db *sqlx.DB
 
-func OpenDB(config *Conf) {
+func (server *Server) OpenDB() {
 	var err error
 
 	connStr := fmt.Sprintf(
 		"host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
-		config.DBHost, config.DBPort, config.DBUser, config.DBPassword, config.DBName, config.DBSslMode)
+		server.Config.DBHost, server.Config.DBPort, server.Config.DBUser, server.Config.DBPassword, server.Config.DBName, server.Config.DBSslMode)
 
 	// This opens _and_ pings the database.
-	db, err = sqlx.Connect("postgres", connStr)
+	server.DB, err = sqlx.Connect("postgres", connStr)
 	if err != nil {
 		log.Fatal(err)
 	}
 }
 
-func CloseDB() {
-	db.Close()
+func (server *Server) CloseDB() {
+	server.DB.Close()
 }
 
 // Transform JSON to a database driver compatible type.
@@ -49,7 +49,9 @@ func (attributes *PaymentAttributes) Scan(data interface{}) error {
 }
 
 // GET /payments
-func QueryPayments(payments *[]Payment) error {
+func GetPayments(db *sqlx.DB) ([]Payment, error) {
+	payments := []Payment{}
+
 	query := `
 		SELECT
 			payments.id, payments.version, payments.organisation_id, payments.attributes,
@@ -61,11 +63,14 @@ func QueryPayments(payments *[]Payment) error {
 		ON
 			payments.type_id = payment_types.id`
 
-	return db.Select(payments, query)
+	if err := db.Select(&payments, query); err != nil {
+		return nil, err
+	}
+	return payments, nil
 }
 
 // GET /payments/:id
-func QueryPayment(payment *Payment, id string) error {
+func (payment *Payment) Get(db *sqlx.DB) error {
 	query := `
 		SELECT
 			payments.id, payments.version, payments.organisation_id, payments.attributes,
@@ -79,11 +84,11 @@ func QueryPayment(payment *Payment, id string) error {
 		WHERE
 			payments.id = $1`
 
-	return db.Get(payment, query, id)
+	return db.Get(payment, query, payment.ID)
 }
 
 // POST /payments
-func StorePayment(payment *Payment) error {
+func (payment *Payment) Save(db *sqlx.DB) error {
 	query := `
 		INSERT INTO
 			payments (type_id, organisation_id, attributes)
@@ -92,11 +97,11 @@ func StorePayment(payment *Payment) error {
 		RETURNING
 			id`
 
-	return db.QueryRowx(query, &payment.Type, &payment.OrganisationID, &payment.Attributes).Scan(&payment.ID)
+	return db.QueryRowx(query, payment.Type, payment.OrganisationID, payment.Attributes).Scan(&payment.ID)
 }
 
 // PUT, PATCH /payments/:id
-func ReplacePayment(payment *Payment) error {
+func (payment *Payment) Overwrite(db *sqlx.DB) error {
 	query := `
 		UPDATE
 			payments
@@ -114,14 +119,14 @@ func ReplacePayment(payment *Payment) error {
 }
 
 // DELETE /payments/:id
-func ErasePayment(id string) error {
+func (payment *Payment) Remove(db *sqlx.DB) error {
 	query := `
 		DELETE FROM
 			payments
 		WHERE
 			id = $1`
 
-	_, err := db.Exec(query, id)
+	_, err := db.Exec(query, payment.ID)
 
 	return err
 }
